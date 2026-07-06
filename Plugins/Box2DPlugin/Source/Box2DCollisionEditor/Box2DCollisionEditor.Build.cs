@@ -30,6 +30,7 @@ namespace UnrealBuildTool.Rules
                 "PropertyEditor",
                 "EditorFramework",
                 "Kismet",
+                "KismetWidgets",
                 "InputCore",
                 "ToolMenus",
                 "ToolWidgets",

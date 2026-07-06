@@ -1,6 +1,7 @@
 #include "Box2DCollisionEditorPCH.h"
 #include "Box2DCollisionProfileAssetTypeActions.h"
 #include "Box2DCollisionProfile.h"
+#include "CollisionEditor/Box2DCollisionEditor.h"
 #include "ToolMenuSection.h"
 #include "Styling/AppStyle.h"
 
@@ -28,9 +29,16 @@ UClass* FBox2DCollisionProfileAssetTypeActions::GetSupportedClass() const
 
 void FBox2DCollisionProfileAssetTypeActions::OpenAssetEditor(const TArray<UObject*>& InObjects, TSharedPtr<class IToolkitHost> EditWithinLevelEditor)
 {
-    // For now, open in default property editor. Phase 3 will add custom editor.
-    //const EToolkitMode::Type Mode = EditWithinLevelEditor.IsValid() ? EToolkitMode::WorldCentric : EToolkitMode::Standalone;
-    // Custom editor will be wired here in Phase 3.
+    const EToolkitMode::Type Mode = EditWithinLevelEditor.IsValid() ? EToolkitMode::WorldCentric : EToolkitMode::Standalone;
+
+    for (UObject* Object : InObjects)
+    {
+        if (UBox2DCollisionProfile* Profile = Cast<UBox2DCollisionProfile>(Object))
+        {
+            TSharedRef<FBox2DCollisionEditor> NewEditor = MakeShareable(new FBox2DCollisionEditor());
+            NewEditor->InitCollisionEditor(Mode, EditWithinLevelEditor, Profile);
+        }
+    }
 }
 
 uint32 FBox2DCollisionProfileAssetTypeActions::GetCategories()

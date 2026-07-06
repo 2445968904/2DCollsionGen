@@ -3,10 +3,15 @@
 #include "AssetToolsModule.h"
 #include "IAssetTools.h"
 #include "AssetRegistry/AssetDataTagMap.h"
+#include "EditorModeRegistry.h"
+#include "PropertyEditorModule.h"
 
 #include "Box2DCollisionProfileAssetTypeActions.h"
 #include "Box2DCollisionProfileFactory.h"
 #include "Box2DStyle.h"
+#include "CollisionEditor/Box2DCollisionGeometryEditMode.h"
+#include "Box2DCollisionProfileDetailsCustomization.h"
+#include "Box2DCollisionProfile.h"
 
 #define LOCTEXT_NAMESPACE "Box2DCollisionEditor"
 
@@ -31,11 +36,36 @@ public:
 
         // Register asset type actions
         RegisterAssetTypeAction(AssetTools, MakeShareable(new FBox2DCollisionProfileAssetTypeActions(Box2DAssetCategoryBit)));
+
+        // Register the geometry edit mode so the mode manager can instantiate it
+        FEditorModeRegistry::Get().RegisterMode<FBox2DCollisionGeometryEditMode>(
+            FBox2DCollisionGeometryEditMode::EM_Box2DCollisionGeometry,
+            LOCTEXT("Box2DCollisionGeometryMode", "Box2D Collision Geometry"),
+            FSlateIcon(),
+            true
+        );
+
+        // Register details customization for auto-generate collision
+        FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
+        PropertyModule.RegisterCustomClassLayout(
+            UBox2DCollisionProfile::StaticClass()->GetFName(),
+            FOnGetDetailCustomizationInstance::CreateStatic(&FBox2DCollisionProfileDetailsCustomization::MakeInstance)
+        );
     }
 
     virtual void ShutdownModule() override
     {
         FCoreDelegates::GetOnPostEngineInit().RemoveAll(this);
+
+        // Unregister details customization
+        if (FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
+        {
+            FPropertyEditorModule& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
+            PropertyModule.UnregisterCustomClassLayout(UBox2DCollisionProfile::StaticClass()->GetFName());
+        }
+
+        // Unregister the geometry edit mode
+        FEditorModeRegistry::Get().UnregisterMode(FBox2DCollisionGeometryEditMode::EM_Box2DCollisionGeometry);
 
         // Unregister asset type actions
         if (FModuleManager::Get().IsModuleLoaded("AssetTools"))
