@@ -1,0 +1,39 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "Box2D Plugin",
+	"Description": "A plugin to integrate Box2D physics simulation into Unreal Engine 5.8",
+	"Category": "Physics",
+	"CreatedBy": "Box2D by Erin Catto, Plugin integration",
+	"CreatedByURL": "https://box2d.org",
+	"DocsURL": "https://box2d.org/documentation/",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"EnabledByDefault": true,
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "Box2DPlugin",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault"
+		},
+		{
+			"Name": "Box2DEditorPlugin",
+			"Type": "Editor"
+		},
+		{
+			"Name": "Box2DCollisionEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "ProceduralMeshComponent",
+			"Enabled": true
+		}
+	]
+}

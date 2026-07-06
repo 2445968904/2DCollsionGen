@@ -1,0 +1,168 @@
+NOTICE — fork modifications
+============================
+
+This is a derivative work of Google's LiquidFun 1.1.0
+(upstream: https://github.com/google/liquidfun), branched from upstream
+commit 7f20402173fd143a3988c921bc384459c6a858f2 (the final upstream
+commit before archival in February 2026).
+
+The original LiquidFun is itself a derivative work of Erin Catto's
+Box2D 2.x (https://github.com/erincatto/box2d).
+
+This branch (box2d-3.x) PORTS the LiquidFun particle solver to work with
+Box2D 3.x — Erin Catto's from-scratch 2024 C rewrite of Box2D — instead
+of LiquidFun's original Box2D 2.x. Box2D 3.x does not ship a particle
+system; LiquidFun's solver fills that gap. This fork is the adapter
+between them.
+
+The zlib/libpng license (see LICENSE) requires that altered source
+versions be plainly marked, that the origin not be misrepresented, and
+that the original notice be preserved. The original notice is preserved
+in UPSTREAM_NOTICE; this NOTICE documents what was changed.
+
+CHANGES FROM UPSTREAM
+---------------------
+
+### Files REMOVED from upstream
+
+  - freeglut/                         — Testbed app's GLUT dependency
+  - googletest/                       — unit-test framework
+  - liquidfun/Contributions/          — non-C++ language bindings
+                                        (Java, JavaScript, AS3, Lua, etc.)
+  - liquidfun/tools/                  — SWIG bindings + auxiliary tools
+  - liquidfun/Box2D/Box2D/Rope/       — rope simulation; outside the
+                                        particle solver's scope
+  - liquidfun/Box2D/Box2D/Documentation/ — handled in README.md instead
+  - liquidfun/Box2D/Box2D/Dynamics/   — most files removed; only
+                                        b2TimeStep.h and b2WorldCallbacks.h
+                                        retained (Box2D 3.x replaces the
+                                        dynamics subsystem entirely)
+  - liquidfun/Box2D/Box2D/Collision/  — most files removed; only
+                                        b2Collision.h retained; the Shape
+                                        subsystem was REPLACED (see below)
+  - All upstream CMakeLists.txt, Box2DConfig.cmake.in, UseBox2D.cmake,
+    Box2D.h umbrella header — replaced by this fork's own CMakeLists.txt
+
+### Files REPLACED (no longer reflect upstream LiquidFun source)
+
+The Box2D 2.x b2World / b2Body / b2Fixture / b2Shape classes were
+replaced with minimal stubs that route method calls through the
+box2d3_adapter bridge instead of running their own dynamics. Each file
+below carries a header comment noting it is a REPLACEMENT.
+
+  - include/Box2D/Dynamics/b2World.h
+  - include/Box2D/Dynamics/b2Body.h
+  - include/Box2D/Dynamics/b2Fixture.h
+  - include/Box2D/Dynamics/b2ContactManager.h         (minimal stub; held by
+                                                       b2World as a value field)
+  - include/Box2D/Collision/Shapes/b2Shape.h
+  - include/Box2D/Collision/Shapes/b2CircleShape.h
+  - include/Box2D/Collision/Shapes/b2PolygonShape.h
+  - include/Box2D/Collision/Shapes/b2EdgeShape.h      (minimal stub)
+  - include/Box2D/Collision/Shapes/b2ChainShape.h     (minimal stub)
+  - include/Box2D/Common/b2Draw.h                     (minimal stub;
+                                                       LiquidFun's debug draw
+                                                       integration is out of
+                                                       scope for the port)
+
+### Files ADDED (new in this fork)
+
+  - LICENSE                                           (zlib license text)
+  - NOTICE                                            (this file)
+  - README.md                                         (project overview)
+  - CMakeLists.txt                                    (standalone build)
+  - include/box2d3_adapter/bridge.h                   (plain-C bridge API)
+  - include/box2d3_adapter/handle_table.h             (consumer-implemented
+                                                       interface for resolving
+                                                       handles to Box2D 3.x IDs)
+  - src/liquidfun_side_adapter.cpp                    (LiquidFun-side method
+                                                       implementations that
+                                                       route through bridge)
+  - src/box2d3_side_adapter.cpp                       (Box2D-3.x-side bridge
+                                                       implementations)
+  - samples/dam_break/                                (standalone sample app)
+
+### Files RETAINED FROM UPSTREAM (verbatim, no modifications)
+
+  - All files under src/Box2D/Particle/
+  - All files under src/Box2D/Common/
+  - include/Box2D/Particle/*.h (six headers: b2Particle.h,
+    b2ParticleAssembly.h, b2ParticleGroup.h, b2ParticleSystem.h,
+    b2StackQueue.h, b2VoronoiDiagram.h)
+  - include/Box2D/Common/*.h     (except b2Draw.h, which was replaced)
+  - include/Box2D/Dynamics/b2TimeStep.h
+  - include/Box2D/Dynamics/b2WorldCallbacks.h
+  - include/Box2D/Collision/b2Collision.h
+  - UPSTREAM_NOTICE              (the original LiquidFun copyright header,
+                                  preserved verbatim per zlib condition 3)
+  - UPSTREAM_README.md           (the original LiquidFun README, renamed
+                                  to avoid collision with this fork's
+                                  README.md)
+  - UPSTREAM_RELEASENOTES.md     (the original release notes)
+  - MODULE_LICENSE_BSD_LIKE      (Google's AOSP license marker)
+
+CHANGELOG
+---------
+
+### Post-initial-release fixes
+
+**`b2World.h` — add `<cstdint>` include.** The header uses `uint64_t`
+for the adapter-extension filter fields (`lfa_query_category_bits` /
+`lfa_query_mask_bits`) but didn't include `<cstdint>`. macOS / libc++
+gets the type transitively from other STL headers; Linux / libstdc++
+doesn't, so Linux builds failed with `'uint64_t' does not name a type`.
+
+**`samples/dam_break` — split into two TUs to match the adapter's
+symbol-isolation rule.** The original sample included both
+`<box2d/box2d.h>` (Box2D 3.x) and `<Box2D/Common/b2Math.h>`
+(LiquidFun) in the same translation unit. These header sets define
+`b2Vec2`, `b2Mat22`, `b2Rot`, `b2Transform`, etc. with conflicting
+signatures and produce hundreds of redefinition errors. The sample
+now splits its sources following the same rule the adapter uses
+internally: `main.cpp` sees ONLY Box2D 3.x (owns the rigid world +
+handle-table implementation), `particle_world.cpp` sees ONLY LiquidFun
+(owns the b2World stub + particle system), with `dam_break.h`
+providing a plain-C interface between them. This is also the model
+downstream consumers must follow when integrating the library.
+
+**`samples/dam_break` — set user-data on the ground body + shape.**
+Without `b2Body_SetUserData` / `b2Shape_SetUserData`, the
+`box2d3_side_adapter` AABB-query trampoline reads `userdata == 0`,
+treats it as "no handle registered," and silently skips the LiquidFun
+callback — particles fall straight through the ground. The sample now
+sets user-data so it actually demonstrates working particle-vs-rigid
+contact.
+
+**Known sample limitation (NOT a regression):** the dam_break sample
+prints `sunk_through = N/M > 0` because the minimal setup has no side
+walls and particles spread laterally as the pile settles, eventually
+flowing off the ground's edges. A real consumer integration adds side
+walls (and tunes spawn height + particle iterations + ground thickness)
+to confine the pile. CI fails only on `final_n == 0` (complete adapter
+breakage) — moderate tunneling is expected for this minimal sample and
+is logged but not fatal.
+
+**`b2Fixture::ComputeDistance` + `b2Fixture::RayCast` — correct delegation
+to shape SDF / ray-cast.** The initial port routed these methods through
+the `lfa_fixture_compute_distance` / `lfa_fixture_*` bridge helpers, which
+in turn used Box2D 3.x AABB-based approximations:
+
+- `ComputeDistance` returned a normal computed from the unsigned AABB
+  axis-deltas `dx`/`dy`, which are always non-negative. The returned
+  normal was therefore always in the (+x, +y) quadrant regardless of
+  which side of the body the particle was actually on. After LiquidFun's
+  `contact.normal = -n` flip in `b2ParticleSystem::UpdateBodyContacts`,
+  every particle-body impulse pointed in the (-x, -y) direction. This
+  caused submerged rigid bodies to be yanked toward the world's
+  bottom-left corner instead of being buoyed up.
+- `RayCast` passed an identity transform to the shape's RayCast method
+  instead of the body's actual transform, so LiquidFun's particle CCD
+  (used in `SolveCollision`) checked particle motion against polygons
+  positioned at the origin — particles tunneled through any non-origin
+  polygon.
+
+Both methods now delegate to the corresponding `b2Shape::*` overrides
+in `liquidfun_side_adapter.cpp`, which implement proper polygon /
+circle SDFs and ray-casts using the body's actual world transform.
+Buoyancy now emerges correctly from LiquidFun's SPH pressure model
+(verified against the the original consumer's water-terrain testbed at seed 42).
