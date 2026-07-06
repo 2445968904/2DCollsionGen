@@ -27,6 +27,7 @@ TSharedRef<SWidget> SBox2DCollisionEditorViewportToolbar::GenerateShowMenu() con
 
         ShowMenuBuilder.AddMenuEntry(Commands.SetShowCollision);
         ShowMenuBuilder.AddMenuEntry(Commands.SetShowJoints);
+        ShowMenuBuilder.AddMenuEntry(Commands.SetShowSourceMesh);
     }
 
     return ShowMenuBuilder.MakeWidget();

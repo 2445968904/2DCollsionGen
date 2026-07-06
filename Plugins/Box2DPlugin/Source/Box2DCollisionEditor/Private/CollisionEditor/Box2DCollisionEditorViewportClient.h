@@ -4,6 +4,9 @@
 #include "PreviewScene.h"
 #include "CollisionEditor/Box2DCollisionEditor.h"
 
+class AStaticMeshActor;
+class UStaticMesh;
+
 class FBox2DCollisionEditorViewportClient : public FEditorViewportClient
 {
 public:
@@ -33,6 +36,9 @@ public:
     void ToggleShowJoints() { bShowJoints = !bShowJoints; Invalidate(); }
     bool IsShowJointsChecked() const { return bShowJoints; }
 
+    void ToggleShowSourceMesh() { bShowSourceMesh = !bShowSourceMesh; UpdatePreviewMesh(); Invalidate(); }
+    bool IsShowSourceMeshChecked() const { return bShowSourceMesh; }
+
     // Mode switching
     void EnterViewMode();
     void EnterEditShapesMode();
@@ -53,6 +59,9 @@ public:
 private:
     FBox ComputeFocusBounds() const;
 
+    // Update the preview mesh actor to match the profile's SourceMesh
+    void UpdatePreviewMesh();
+
 private:
     void DrawCollisionShapes(FPrimitiveDrawInterface* PDI, UBox2DCollisionProfile* Profile);
     void DrawJoints(FPrimitiveDrawInterface* PDI, UBox2DCollisionProfile* Profile);
@@ -63,6 +72,12 @@ private:
 
     // The preview scene
     FPreviewScene OwnedPreviewScene;
+
+    // Preview mesh actor in the preview scene
+    TWeakObjectPtr<AStaticMeshActor> PreviewMeshActor;
+
+    // Last loaded source mesh (to detect changes)
+    TWeakObjectPtr<UStaticMesh> LastSourceMesh;
 
     // Editor that owns this viewport
     TWeakPtr<FBox2DCollisionEditor> EditorPtr;
@@ -77,6 +92,7 @@ private:
     bool bShowCollision;
     bool bShowJoints;
     bool bShowBounds;
+    bool bShowSourceMesh;
 
     // Deferred zoom
     bool bDeferZoomToProfile;

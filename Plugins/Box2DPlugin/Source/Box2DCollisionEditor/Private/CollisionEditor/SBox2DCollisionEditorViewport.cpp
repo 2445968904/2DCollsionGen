@@ -43,6 +43,12 @@ void SBox2DCollisionEditorViewport::BindCommands()
         FCanExecuteAction(),
         FIsActionChecked::CreateSP(ViewportClientRef, &FBox2DCollisionEditorViewportClient::IsShowJointsChecked));
 
+    CommandList->MapAction(
+        Commands.SetShowSourceMesh,
+        FExecuteAction::CreateSP(ViewportClientRef, &FBox2DCollisionEditorViewportClient::ToggleShowSourceMesh),
+        FCanExecuteAction(),
+        FIsActionChecked::CreateSP(ViewportClientRef, &FBox2DCollisionEditorViewportClient::IsShowSourceMeshChecked));
+
     // Mode switching - routed through the editor so FEdMode is activated/deactivated
     CommandList->MapAction(
         Commands.EnterViewMode,

@@ -2,6 +2,7 @@
 #include "CollisionEditor/Box2DCollisionGeometryEditMode.h"
 #include "CollisionEditor/Box2DCollisionGeometryEditCommands.h"
 #include "CollisionEditor/Box2DCollisionSelection.h"
+#include "CollisionEditor/Box2DEditorUtils.h"
 #include "Box2DCollisionProfile.h"
 #include "Box2DCollisionTypes.h"
 #include "EditorViewportClient.h"
@@ -23,16 +24,7 @@ namespace Box2DEditModeColors
     const float VertexSize = 6.0f;
 }
 
-// 2D↔3D helpers for XZ plane
-static FORCEINLINE FVector ToXZPlane(const FVector2D& Pos2D)
-{
-    return FVector(Pos2D.X, 0.0f, Pos2D.Y);
-}
-
-static FORCEINLINE FVector2D FromXZPlane(const FVector& WorldPos)
-{
-    return FVector2D(WorldPos.X, WorldPos.Z);
-}
+using namespace Box2DEditorUtils;
 
 FBox2DCollisionGeometryEditMode::FBox2DCollisionGeometryEditMode()
     : ProfileBeingEdited(nullptr)

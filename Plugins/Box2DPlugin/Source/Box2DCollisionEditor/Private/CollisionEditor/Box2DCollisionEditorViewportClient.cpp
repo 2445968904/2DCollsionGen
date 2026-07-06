@@ -1,6 +1,7 @@
 #include "Box2DCollisionEditorPCH.h"
 #include "CollisionEditor/Box2DCollisionEditorViewportClient.h"
 #include "CollisionEditor/Box2DCollisionEditor.h"
+#include "CollisionEditor/Box2DEditorUtils.h"
 #include "Box2DCollisionProfile.h"
 #include "Box2DCollisionTypes.h"
 #include "AssetEditorModeManager.h"
@@ -9,6 +10,9 @@
 #include "CanvasTypes.h"
 #include "SceneView.h"
 #include "EngineUtils.h"
+#include "Engine/StaticMeshActor.h"
+#include "Engine/StaticMesh.h"
+#include "Components/StaticMeshComponent.h"
 
 #define LOCTEXT_NAMESPACE "Box2DCollisionEditor"
 
@@ -27,11 +31,7 @@ namespace Box2DEditorConstants
     const float DashGap = 5.0f;
 }
 
-// Convert 2D position (X=right, Y=up in 2D) to 3D XZ plane (X=right, Z=up, Y=depth)
-static FORCEINLINE FVector ToXZPlane(const FVector2D& Pos2D)
-{
-    return FVector(Pos2D.X, 0.0f, Pos2D.Y);
-}
+using namespace Box2DEditorUtils;
 
 FBox2DCollisionEditorViewportClient::FBox2DCollisionEditorViewportClient(
     TWeakPtr<FBox2DCollisionEditor> InEditor,
@@ -43,6 +43,7 @@ FBox2DCollisionEditorViewportClient::FBox2DCollisionEditorViewportClient(
     , bShowCollision(true)
     , bShowJoints(true)
     , bShowBounds(false)
+    , bShowSourceMesh(true)
     , bDeferZoomToProfile(true)
     , bDeferZoomIsInstant(true)
 {
@@ -84,6 +85,9 @@ float FBox2DCollisionEditorViewportClient::GetWorldScale() const
 
 void FBox2DCollisionEditorViewportClient::Tick(float DeltaSeconds)
 {
+    // Check if source mesh changed and update preview
+    UpdatePreviewMesh();
+
     // Deferred zoom to profile bounds
     FIntPoint Size = Viewport->GetSizeXY();
     if (bDeferZoomToProfile && (Size.X > 0) && (Size.Y > 0))
@@ -113,59 +117,112 @@ FLinearColor FBox2DCollisionEditorViewportClient::GetBackgroundColor() const
 FBox FBox2DCollisionEditorViewportClient::ComputeFocusBounds() const
 {
     UBox2DCollisionProfile* Profile = GetProfileBeingEdited();
-    if (!Profile || Profile->Bodies.Num() == 0)
+
+    FBox Bounds(ForceInit);
+
+    // Include the source mesh actor bounds
+    if (PreviewMeshActor.IsValid() && bShowSourceMesh)
     {
-        return FBox(FVector(-100, -1, -100), FVector(100, 1, 100));
-    }
-
-    float Scale = GetWorldScale();
-    FBox2D Bounds2D(ForceInitToZero);
-
-    for (const FBox2DCollisionBody& Body : Profile->Bodies)
-    {
-        FVector2D BodyPos = Body.Position * Scale;
-
-        for (const FBox2DCollisionShape& Shape : Body.Shapes)
+        FBox MeshBounds = PreviewMeshActor.Get()->GetComponentsBoundingBox();
+        if (MeshBounds.IsValid)
         {
-            FVector2D ShapeCenter = BodyPos + Shape.Center * Scale;
-
-            if (Shape.ShapeType == EBox2DCollisionShapeType::Box)
-            {
-                FVector2D HalfExt = Shape.HalfExtents * Scale;
-                FBox2D ShapeBox(ShapeCenter - HalfExt, ShapeCenter + HalfExt);
-                Bounds2D += ShapeBox;
-            }
-            else if (Shape.ShapeType == EBox2DCollisionShapeType::Circle)
-            {
-                float Radius = Shape.HalfExtents.X * Scale;
-                FBox2D ShapeBox(ShapeCenter - FVector2D(Radius), ShapeCenter + FVector2D(Radius));
-                Bounds2D += ShapeBox;
-            }
-            else if (Shape.ShapeType == EBox2DCollisionShapeType::Polygon && Shape.Vertices.Num() >= 3)
-            {
-                for (const FVector2D& Vert : Shape.Vertices)
-                {
-                    Bounds2D += BodyPos + (Shape.Center + Vert) * Scale;
-                }
-            }
+            Bounds += MeshBounds;
         }
     }
 
-    if (!Bounds2D.bIsValid)
+    // Include collision shapes
+    if (Profile && Profile->Bodies.Num() > 0)
+    {
+        float Scale = GetWorldScale();
+        FBox2D Bounds2D(ForceInitToZero);
+
+        for (const FBox2DCollisionBody& Body : Profile->Bodies)
+        {
+            FVector2D BodyPos = Body.Position * Scale;
+
+            for (const FBox2DCollisionShape& Shape : Body.Shapes)
+            {
+                FVector2D ShapeCenter = BodyPos + Shape.Center * Scale;
+
+                if (Shape.ShapeType == EBox2DCollisionShapeType::Box)
+                {
+                    FVector2D HalfExt = Shape.HalfExtents * Scale;
+                    FBox2D ShapeBox(ShapeCenter - HalfExt, ShapeCenter + HalfExt);
+                    Bounds2D += ShapeBox;
+                }
+                else if (Shape.ShapeType == EBox2DCollisionShapeType::Circle)
+                {
+                    float Radius = Shape.HalfExtents.X * Scale;
+                    FBox2D ShapeBox(ShapeCenter - FVector2D(Radius), ShapeCenter + FVector2D(Radius));
+                    Bounds2D += ShapeBox;
+                }
+                else if (Shape.ShapeType == EBox2DCollisionShapeType::Polygon && Shape.Vertices.Num() >= 3)
+                {
+                    for (const FVector2D& Vert : Shape.Vertices)
+                    {
+                        Bounds2D += BodyPos + (Shape.Center + Vert) * Scale;
+                    }
+                }
+            }
+        }
+
+        if (Bounds2D.bIsValid)
+        {
+            FVector2D Padding(50.0f);
+            Bounds2D.Min -= Padding;
+            Bounds2D.Max += Padding;
+            Bounds += FBox(
+                FVector(Bounds2D.Min.X, -1.0f, Bounds2D.Min.Y),
+                FVector(Bounds2D.Max.X, 1.0f, Bounds2D.Max.Y)
+            );
+        }
+    }
+
+    if (!Bounds.IsValid)
     {
         return FBox(FVector(-100, -1, -100), FVector(100, 1, 100));
     }
 
-    // Add padding
-    FVector2D Padding(50.0f);
-    Bounds2D.Min -= Padding;
-    Bounds2D.Max += Padding;
+    // Ensure Y is thin for 2D view
+    Bounds.Min.Y = FMath::Min(Bounds.Min.Y, -1.0f);
+    Bounds.Max.Y = FMath::Max(Bounds.Max.Y, 1.0f);
 
-    // Convert 2D bounds to 3D on XZ plane (Y=0, thin in Y)
-    return FBox(
-        FVector(Bounds2D.Min.X, -1.0f, Bounds2D.Min.Y),
-        FVector(Bounds2D.Max.X, 1.0f, Bounds2D.Max.Y)
-    );
+    return Bounds;
+}
+
+void FBox2DCollisionEditorViewportClient::UpdatePreviewMesh()
+{
+    UBox2DCollisionProfile* Profile = GetProfileBeingEdited();
+    UStaticMesh* SourceMesh = Profile ? Profile->SourceMesh.LoadSynchronous() : nullptr;
+
+    // Only update if the mesh actually changed
+    if (SourceMesh == LastSourceMesh.Get()) return;
+    LastSourceMesh = SourceMesh;
+
+    // Remove old actor
+    if (PreviewMeshActor.IsValid())
+    {
+        OwnedPreviewScene.GetWorld()->DestroyActor(PreviewMeshActor.Get());
+        PreviewMeshActor = nullptr;
+    }
+
+    // Add new actor if mesh is set and show is enabled
+    if (SourceMesh && bShowSourceMesh)
+    {
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        AStaticMeshActor* Actor = OwnedPreviewScene.GetWorld()->SpawnActor<AStaticMeshActor>(FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+        if (Actor)
+        {
+            Actor->GetStaticMeshComponent()->SetStaticMesh(SourceMesh);
+            Actor->GetStaticMeshComponent()->SetMobility(EComponentMobility::Movable);
+            PreviewMeshActor = Actor;
+
+            // Focus on the new mesh
+            bDeferZoomToProfile = true;
+            bDeferZoomIsInstant = true;
+        }
+    }
 }
 
 void FBox2DCollisionEditorViewportClient::RequestFocusOnSelection(bool bInstant)

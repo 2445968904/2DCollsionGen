@@ -15,6 +15,7 @@ void FBox2DCollisionEditorCommands::RegisterCommands()
     UI_COMMAND(SetShowBounds, "Bounds", "Toggles display of bounds.", EUserInterfaceActionType::ToggleButton, FInputChord());
     UI_COMMAND(SetShowCollision, "Collision", "Toggles display of collision shapes.", EUserInterfaceActionType::ToggleButton, FInputChord());
     UI_COMMAND(SetShowJoints, "Joints", "Toggles display of joints.", EUserInterfaceActionType::ToggleButton, FInputChord());
+    UI_COMMAND(SetShowSourceMesh, "Source Mesh", "Toggles display of the source StaticMesh.", EUserInterfaceActionType::ToggleButton, FInputChord());
 }
 
 #undef LOCTEXT_NAMESPACE

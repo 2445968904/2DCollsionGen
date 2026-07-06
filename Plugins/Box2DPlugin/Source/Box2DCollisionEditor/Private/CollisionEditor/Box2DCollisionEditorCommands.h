@@ -28,4 +28,5 @@ public:
     TSharedPtr<FUICommandInfo> SetShowBounds;
     TSharedPtr<FUICommandInfo> SetShowCollision;
     TSharedPtr<FUICommandInfo> SetShowJoints;
+    TSharedPtr<FUICommandInfo> SetShowSourceMesh;
 };

@@ -1,17 +1,14 @@
 #include "Box2DCollisionEditorPCH.h"
 #include "CollisionEditor/Box2DCollisionSelection.h"
+#include "CollisionEditor/Box2DEditorUtils.h"
 #include "Box2DCollisionProfile.h"
 #include "Box2DCollisionTypes.h"
+
+using namespace Box2DEditorUtils;
 
 const FName FBox2DCollisionSelectionTypes::Shape(TEXT("Box2DShape"));
 const FName FBox2DCollisionSelectionTypes::Vertex(TEXT("Box2DVertex"));
 const FName FBox2DCollisionSelectionTypes::Body(TEXT("Box2DBody"));
-
-// Helper: 2D position to 3D XZ plane
-static FORCEINLINE FVector ToXZPlane(const FVector2D& Pos2D)
-{
-    return FVector(Pos2D.X, 0.0f, Pos2D.Y);
-}
 
 FVector FBox2DSelectedShape::GetWorldPos() const
 {
