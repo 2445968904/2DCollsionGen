@@ -347,7 +347,7 @@ bool FBox2DCollisionGeometryEditMode::HandleClick(FEditorViewportClient* InViewp
     // Handle polygon creation clicks
     if (bIsAddingPolygon)
     {
-        if (Click.GetKey() == EKeys::LeftMouseButton && Click.GetEvent() == IE_Pressed)
+        if (Click.GetKey() == EKeys::LeftMouseButton && (Click.GetEvent() == IE_Pressed || Click.GetEvent() == IE_Released))
         {
             FVector2D ClickPos2D = ViewportClickTo2D(Click, InViewportClient);
             PolygonPoints.Add(ClickPos2D);
@@ -359,7 +359,8 @@ bool FBox2DCollisionGeometryEditMode::HandleClick(FEditorViewportClient* InViewp
     // Convert click to 2D space
     FVector2D ClickPos2D = ViewportClickTo2D(Click, InViewportClient);
 
-    if (Click.GetEvent() != IE_Pressed) return false;
+    // ProcessClick fires on mouse release (IE_Released), so accept both Pressed and Released
+    if (Click.GetEvent() != IE_Pressed && Click.GetEvent() != IE_Released) return false;
 
     bool bHandled = false;
 

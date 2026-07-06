@@ -67,5 +67,6 @@ protected:
 
     void CreateModeToolbarWidgets(FToolBarBuilder& ToolbarBuilder);
     void CreateShapeToolbarWidgets(FToolBarBuilder& ToolbarBuilder);
+    void CreateJointToolbarWidgets(FToolBarBuilder& ToolbarBuilder);
     FText GetCurrentModeCornerText() const;
 };

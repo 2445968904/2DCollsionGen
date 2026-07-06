@@ -7,6 +7,8 @@
 #include "CollisionEditor/Box2DBodyList.h"
 #include "CollisionEditor/Box2DCollisionGeometryEditMode.h"
 #include "CollisionEditor/Box2DCollisionGeometryEditCommands.h"
+#include "CollisionEditor/Box2DCollisionJointEditMode.h"
+#include "CollisionEditor/Box2DCollisionJointEditCommands.h"
 #include "Box2DCollisionProfile.h"
 #include "Box2DStyle.h"
 #include "EditorModeManager.h"
@@ -155,6 +157,7 @@ void FBox2DCollisionEditor::InitCollisionEditor(const EToolkitMode::Type Mode, c
 
     FBox2DCollisionEditorCommands::Register();
     FBox2DCollisionGeometryEditCommands::Register();
+    FBox2DCollisionJointEditCommands::Register();
 
     BindCommands();
 
@@ -272,6 +275,12 @@ void FBox2DCollisionEditor::ExtendToolbar()
         ViewportPtr->GetCommandList(),
         FToolBarExtensionDelegate::CreateSP(this, &FBox2DCollisionEditor::CreateShapeToolbarWidgets));
 
+    ToolbarExtender->AddToolBarExtension(
+        "Asset",
+        EExtensionHook::After,
+        ViewportPtr->GetCommandList(),
+        FToolBarExtensionDelegate::CreateSP(this, &FBox2DCollisionEditor::CreateJointToolbarWidgets));
+
     AddToolbarExtender(ToolbarExtender);
 }
 
@@ -297,6 +306,15 @@ void FBox2DCollisionEditor::CreateEditorModeManager()
 
     // Deactivate the mode initially (View mode by default)
     EditorModeManager->DeactivateMode(FBox2DCollisionGeometryEditMode::EM_Box2DCollisionGeometry);
+
+    // Activate and configure joint edit mode (for command binding), then deactivate
+    EditorModeManager->ActivateMode(FBox2DCollisionJointEditMode::EM_Box2DCollisionJoint);
+    if (FBox2DCollisionJointEditMode* JointMode = EditorModeManager->GetActiveModeTyped<FBox2DCollisionJointEditMode>(FBox2DCollisionJointEditMode::EM_Box2DCollisionJoint))
+    {
+        JointMode->SetProfileBeingEdited(ProfileBeingEdited);
+        JointMode->BindCommands(ViewportPtr->GetCommandList());
+    }
+    EditorModeManager->DeactivateMode(FBox2DCollisionJointEditMode::EM_Box2DCollisionJoint);
 }
 
 void FBox2DCollisionEditor::CreateModeToolbarWidgets(FToolBarBuilder& IgnoredBuilder)
@@ -320,6 +338,18 @@ void FBox2DCollisionEditor::CreateShapeToolbarWidgets(FToolBarBuilder& IgnoredBu
     AddToolbarWidget(ToolbarBuilder.MakeWidget());
 }
 
+void FBox2DCollisionEditor::CreateJointToolbarWidgets(FToolBarBuilder& IgnoredBuilder)
+{
+    FSlimHorizontalToolBarBuilder ToolbarBuilder(ViewportPtr->GetCommandList(), FMultiBoxCustomization::None);
+    const FBox2DCollisionJointEditCommands& Commands = FBox2DCollisionJointEditCommands::Get();
+    ToolbarBuilder.AddToolBarButton(Commands.AddDistanceJoint);
+    ToolbarBuilder.AddToolBarButton(Commands.AddRevoluteJoint);
+    ToolbarBuilder.AddToolBarButton(Commands.AddPrismaticJoint);
+    ToolbarBuilder.AddToolBarButton(Commands.AddWeldJoint);
+    ToolbarBuilder.AddToolBarButton(Commands.DeleteJoint);
+    AddToolbarWidget(ToolbarBuilder.MakeWidget());
+}
+
 void FBox2DCollisionEditor::SetCurrentMode(EBox2DCollisionEditorMode::Type NewMode)
 {
     if (!ViewportPtr.IsValid()) return;
@@ -332,9 +362,11 @@ void FBox2DCollisionEditor::SetCurrentMode(EBox2DCollisionEditorMode::Type NewMo
         case EBox2DCollisionEditorMode::ViewMode:
             TypedVC->EnterViewMode();
             EditorModeManager->DeactivateMode(FBox2DCollisionGeometryEditMode::EM_Box2DCollisionGeometry);
+            EditorModeManager->DeactivateMode(FBox2DCollisionJointEditMode::EM_Box2DCollisionJoint);
             break;
         case EBox2DCollisionEditorMode::EditShapesMode:
             TypedVC->EnterEditShapesMode();
+            EditorModeManager->DeactivateMode(FBox2DCollisionJointEditMode::EM_Box2DCollisionJoint);
             if (!EditorModeManager->IsModeActive(FBox2DCollisionGeometryEditMode::EM_Box2DCollisionGeometry))
             {
                 EditorModeManager->ActivateMode(FBox2DCollisionGeometryEditMode::EM_Box2DCollisionGeometry);
@@ -343,10 +375,20 @@ void FBox2DCollisionEditor::SetCurrentMode(EBox2DCollisionEditorMode::Type NewMo
             {
                 GeometryMode->SetProfileBeingEdited(ProfileBeingEdited);
             }
+            TypedVC->SetWidgetMode(UE::Widget::WM_Translate);
             break;
         case EBox2DCollisionEditorMode::EditJointsMode:
             TypedVC->EnterEditJointsMode();
             EditorModeManager->DeactivateMode(FBox2DCollisionGeometryEditMode::EM_Box2DCollisionGeometry);
+            if (!EditorModeManager->IsModeActive(FBox2DCollisionJointEditMode::EM_Box2DCollisionJoint))
+            {
+                EditorModeManager->ActivateMode(FBox2DCollisionJointEditMode::EM_Box2DCollisionJoint);
+            }
+            if (FBox2DCollisionJointEditMode* JointMode = EditorModeManager->GetActiveModeTyped<FBox2DCollisionJointEditMode>(FBox2DCollisionJointEditMode::EM_Box2DCollisionJoint))
+            {
+                JointMode->SetProfileBeingEdited(ProfileBeingEdited);
+            }
+            TypedVC->SetWidgetMode(UE::Widget::WM_Translate);
             break;
         }
     }

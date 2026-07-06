@@ -10,6 +10,7 @@
 #include "Box2DCollisionProfileFactory.h"
 #include "Box2DStyle.h"
 #include "CollisionEditor/Box2DCollisionGeometryEditMode.h"
+#include "CollisionEditor/Box2DCollisionJointEditMode.h"
 #include "Box2DCollisionProfileDetailsCustomization.h"
 #include "Box2DCollisionProfile.h"
 
@@ -45,6 +46,14 @@ public:
             true
         );
 
+        // Register the joint edit mode
+        FEditorModeRegistry::Get().RegisterMode<FBox2DCollisionJointEditMode>(
+            FBox2DCollisionJointEditMode::EM_Box2DCollisionJoint,
+            LOCTEXT("Box2DCollisionJointMode", "Box2D Collision Joint"),
+            FSlateIcon(),
+            true
+        );
+
         // Register details customization for auto-generate collision
         FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
         PropertyModule.RegisterCustomClassLayout(
@@ -66,6 +75,9 @@ public:
 
         // Unregister the geometry edit mode
         FEditorModeRegistry::Get().UnregisterMode(FBox2DCollisionGeometryEditMode::EM_Box2DCollisionGeometry);
+
+        // Unregister the joint edit mode
+        FEditorModeRegistry::Get().UnregisterMode(FBox2DCollisionJointEditMode::EM_Box2DCollisionJoint);
 
         // Unregister asset type actions
         if (FModuleManager::Get().IsModuleLoaded("AssetTools"))

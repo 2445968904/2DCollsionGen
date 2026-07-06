@@ -530,7 +530,45 @@ void FBox2DCollisionEditorViewportClient::DrawCanvasInfo(FViewport& InViewport, 
 
 void FBox2DCollisionEditorViewportClient::ProcessClick(FSceneView& View, HHitProxy* HitProxy, FKey Key, EInputEvent Event, uint32 HitX, uint32 HitY)
 {
+    // Forward click to active edit modes
+    if (CurrentMode != EBox2DCollisionEditorMode::ViewMode)
+    {
+        const FViewportClick Click(&View, this, Key, Event, HitX, HitY);
+        if (ModeTools->HandleClick(this, HitProxy, Click))
+        {
+            return;
+        }
+    }
+
     FEditorViewportClient::ProcessClick(View, HitProxy, Key, Event, HitX, HitY);
+}
+
+bool FBox2DCollisionEditorViewportClient::InputKey(const FInputKeyEventArgs& EventArgs)
+{
+    // Forward key events to active edit modes
+    if (CurrentMode != EBox2DCollisionEditorMode::ViewMode)
+    {
+        if (ModeTools->InputKey(this, EventArgs.Viewport, EventArgs.Key, EventArgs.Event))
+        {
+            return true;
+        }
+    }
+
+    return FEditorViewportClient::InputKey(EventArgs);
+}
+
+bool FBox2DCollisionEditorViewportClient::InputWidgetDelta(FViewport* InViewport, EAxisList::Type CurrentAxis, FVector& Drag, FRotator& Rot, FVector& Scale)
+{
+    // Forward widget delta to active edit modes
+    if (CurrentMode != EBox2DCollisionEditorMode::ViewMode)
+    {
+        if (ModeTools->InputDelta(this, InViewport, Drag, Rot, Scale))
+        {
+            return true;
+        }
+    }
+
+    return FEditorViewportClient::InputWidgetDelta(InViewport, CurrentAxis, Drag, Rot, Scale);
 }
 
 #undef LOCTEXT_NAMESPACE
