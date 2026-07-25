@@ -13,6 +13,7 @@
 #include "Engine/StaticMeshActor.h"
 #include "Engine/StaticMesh.h"
 #include "Components/StaticMeshComponent.h"
+#include "ScopedTransaction.h"
 
 #define LOCTEXT_NAMESPACE "Box2DCollisionEditor"
 
@@ -46,6 +47,7 @@ FBox2DCollisionEditorViewportClient::FBox2DCollisionEditorViewportClient(
     , bShowSourceMesh(true)
     , bDeferZoomToProfile(true)
     , bDeferZoomIsInstant(true)
+    , bManipulating(false)
 {
     PreviewScene = &OwnedPreviewScene;
     ((FAssetEditorModeManager*)ModeTools.Get())->SetPreviewScene(PreviewScene);
@@ -559,16 +561,29 @@ bool FBox2DCollisionEditorViewportClient::InputKey(const FInputKeyEventArgs& Eve
 
 bool FBox2DCollisionEditorViewportClient::InputWidgetDelta(FViewport* InViewport, EAxisList::Type CurrentAxis, FVector& Drag, FRotator& Rot, FVector& Scale)
 {
-    // Forward widget delta to active edit modes
-    if (CurrentMode != EBox2DCollisionEditorMode::ViewMode)
-    {
-        if (ModeTools->InputDelta(this, InViewport, Drag, Rot, Scale))
-        {
-            return true;
-        }
-    }
-
     return FEditorViewportClient::InputWidgetDelta(InViewport, CurrentAxis, Drag, Rot, Scale);
+}
+
+void FBox2DCollisionEditorViewportClient::TrackingStarted(const FInputEventState& InInputState, bool bIsDragging, bool bNudge)
+{
+    const bool bTrackingHandledExternally = ModeTools->StartTracking(this, Viewport);
+
+    if (!bManipulating && bIsDragging && !bTrackingHandledExternally)
+    {
+        ActiveTransaction = MakeUnique<FScopedTransaction>(LOCTEXT("ModifyCollision", "Modify Collision"));
+        bManipulating = true;
+    }
+}
+
+void FBox2DCollisionEditorViewportClient::TrackingStopped()
+{
+    const bool bTransactingHandledByEditorMode = ModeTools->EndTracking(this, Viewport);
+
+    if (bManipulating && !bTransactingHandledByEditorMode)
+    {
+        ActiveTransaction.Reset();
+        bManipulating = false;
+    }
 }
 
 #undef LOCTEXT_NAMESPACE

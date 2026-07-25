@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "test-http": {
+      "type": "http",
+      "url": "https://mcp.sentry.dev/mcp"
+    },
+    "test-sse": {
+      "type": "sse",
+      "url": "https://example.com/mcp/sse"
+    },
+    "test-json": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_TOKEN": "ghp_xxx"
+      }
+    }
+  }
+}

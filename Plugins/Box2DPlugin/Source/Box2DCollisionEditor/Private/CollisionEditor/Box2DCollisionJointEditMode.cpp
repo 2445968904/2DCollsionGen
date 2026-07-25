@@ -197,7 +197,6 @@ bool FBox2DCollisionJointEditMode::InputDelta(FEditorViewportClient* InViewportC
     {
         FVector2D Drag2D(InDrag.X, InDrag.Z);
 
-        const FScopedTransaction Transaction(LOCTEXT("MoveJoint", "Move Joint Anchor"));
         ProfileBeingEdited->Modify();
 
         for (TSharedPtr<FBox2DSelectedJointItem>& Item : SelectedItems)

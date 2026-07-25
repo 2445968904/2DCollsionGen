@@ -321,7 +321,6 @@ bool FBox2DCollisionGeometryEditMode::InputDelta(FEditorViewportClient* InViewpo
         // Convert 3D drag on XZ plane to 2D delta
         FVector2D Drag2D(InDrag.X, InDrag.Z);
 
-        const FScopedTransaction Transaction(LOCTEXT("MoveSelection", "Move Selection"));
         if (ProfileBeingEdited)
         {
             ProfileBeingEdited->Modify();

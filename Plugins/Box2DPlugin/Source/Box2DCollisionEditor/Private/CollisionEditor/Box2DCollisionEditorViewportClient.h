@@ -23,6 +23,8 @@ public:
     virtual void ProcessClick(FSceneView& View, HHitProxy* HitProxy, FKey Key, EInputEvent Event, uint32 HitX, uint32 HitY) override;
     virtual bool InputKey(const FInputKeyEventArgs& EventArgs) override;
     virtual bool InputWidgetDelta(FViewport* InViewport, EAxisList::Type CurrentAxis, FVector& Drag, FRotator& Rot, FVector& Scale) override;
+    virtual void TrackingStarted(const struct FInputEventState& InInputState, bool bIsDragging, bool bNudge) override;
+    virtual void TrackingStopped() override;
     // End of FEditorViewportClient interface
 
     // Show toggles
@@ -99,4 +101,8 @@ private:
     // Deferred zoom
     bool bDeferZoomToProfile;
     bool bDeferZoomIsInstant;
+
+    // Transaction for drag operations
+    bool bManipulating;
+    TUniquePtr<FScopedTransaction> ActiveTransaction;
 };
